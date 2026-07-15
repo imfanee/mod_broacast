@@ -1,0 +1,108 @@
+<configuration name="broadcast.conf" description="One-to-Many Audio Broadcast">
+
+  <!-- Module-wide settings -->
+  <settings>
+    <param name="default-profile" value="default"/>
+    <param name="max-broadcasts"  value="500"/>
+    <param name="event-ring-size" value="1024"/>
+  </settings>
+
+  <!-- Profiles: per-broadcast configuration templates -->
+  <profiles>
+
+    <profile name="default">
+      <!-- Audio parameters -->
+      <param name="rate"                value="8000"/>
+      <param name="interval"            value="20"/>
+      <param name="channels"            value="1"/>
+
+      <!-- Ring sizing -->
+      <param name="ring-size"           value="50"/>
+      <param name="max-lag-frames"      value="10"/>
+
+      <!-- Speaker behavior -->
+      <param name="speaker-override"    value="false"/>
+      <param name="silence-window-ms"   value="800"/>
+      <param name="silence-policy"      value="zero"/>   <!-- zero | cn | moh:filename -->
+      <param name="moh-sound"           value=""/>
+
+      <!-- Listener behavior -->
+      <param name="max-listeners"       value="2000"/>
+      <param name="listener-pre-buffer-ms" value="0"/>   <!-- snap-forward delta -->
+
+      <!-- Timer -->
+      <param name="timer-name"          value="timerfd"/>
+
+      <!-- Audio enhancement (all off by default for performance) -->
+      <param name="energy-detection"    value="true"/>   <!-- speaker only -->
+      <param name="comfort-noise-level" value="0"/>
+      <param name="agc"                 value="false"/>
+
+      <!-- Sounds (kept empty by default to minimize overhead) -->
+      <param name="enter-sound"         value=""/>
+      <param name="exit-sound"          value=""/>
+      <param name="kicked-sound"        value=""/>
+      <param name="locked-sound"        value=""/>
+      <param name="speaker-joined-sound" value=""/>
+
+      <!-- Event behavior -->
+      <param name="verbose-events"      value="false"/>
+      <param name="join-event-delay-ms" value="0"/>
+      <param name="heartbeat-interval-sec" value="60"/>   <!-- 0 = no broadcast::heartbeat -->
+
+      <!-- DTMF / caller controls -->
+      <param name="caller-controls"     value="lecture-controls"/>
+
+      <!-- Recording -->
+      <param name="auto-record"         value="false"/>
+      <param name="record-template"     value="/var/spool/freeswitch/broadcast/${name}-${strftime(%Y%m%d-%H%M%S)}.wav"/>
+    </profile>
+
+    <profile name="high-quality">
+      <param name="rate"        value="48000"/>
+      <param name="interval"    value="20"/>
+      <param name="channels"    value="1"/>
+      <param name="ring-size"   value="50"/>
+      <param name="timer-name"  value="timerfd"/>
+      <!-- inherits other defaults -->
+    </profile>
+
+    <profile name="lecture">
+      <param name="rate"             value="16000"/>
+      <param name="silence-policy"   value="moh:hold-music.wav"/>
+      <param name="speaker-override" value="false"/>
+      <param name="auto-record"      value="true"/>
+      <param name="caller-controls"  value="lecture-controls"/>
+      <param name="max-listeners"    value="500"/>
+    </profile>
+
+  </profiles>
+
+  <!-- DTMF caller control bindings -->
+  <caller-controls>
+
+    <group name="default">
+      <!-- listeners can do almost nothing by default -->
+      <control action="hangup"  digits="0"/>
+    </group>
+
+    <group name="lecture-controls">
+      <control action="hangup"           digits="0"/>
+      <control action="leave"            digits="9"/>
+      <control action="request-speaker"  digits="1"/>
+      <control action="energy-up"        digits="*1"/>
+      <control action="energy-down"      digits="*2"/>
+      <control action="mute-toggle"      digits="*6"/>
+      <control action="vol-up"           digits="*7"/>
+      <control action="vol-down"         digits="*8"/>
+      <control action="vol-reset"        digits="*9"/>
+      <control action="execute-app"      digits="**1" data="playback /usr/share/freeswitch/sounds/en/us/callie/misc/8000/beep.wav"/>
+      <control action="lua"              digits="**2" data="/usr/src/freeswitch/src/mod/applications/mod_broadcast/test/test.lua"/>
+      <control action="js"               digits="**3" data="/usr/src/freeswitch/src/mod/applications/mod_broadcast/test/test.js"/>
+      <control action="transfer"         digits="**4" data="5002 XML default"/>
+      <control action="event"            digits="##"  data="custom-signal-payload"/>
+    </group>
+
+  </caller-controls>
+
+</configuration>

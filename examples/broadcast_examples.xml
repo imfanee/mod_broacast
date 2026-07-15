@@ -1,0 +1,63 @@
+<!--
+  Reference dialplan snippets for mod_broadcast (not loaded automatically).
+  Merge into your domain context or include from extensions.conf.xml.
+-->
+<document type="freeswitch/xml">
+
+  <!-- Speaker leg: simple PIN before granting speaker role -->
+  <extension name="broadcast_speaker_pin">
+    <condition field="destination_number" expression="^3000$">
+      <action application="answer"/>
+      <action application="sleep" data="500"/>
+      <action application="read" data="4 4 /usr/share/freeswitch/sounds/en/us/callie/conference/8000/conf-enter_conf_pin.wav pin_attempted \d+"/>
+      <action application="set" data="pin_ok=false"/>
+      <action application="set" data="pin_ok=true" inline="true"/>
+      <condition field="${pin_attempted}" expression="^1234$" break="never">
+        <action application="set" data="pin_ok=true"/>
+      </condition>
+      <action application="log" data="INFO broadcast speaker pin attempt=${pin_attempted} ok=${pin_ok}"/>
+      <action application="execute_extension" data="broadcast_speaker_join XML default"/>
+    </condition>
+  </extension>
+
+  <extension name="broadcast_speaker_join">
+    <condition field="pin_ok" expression="^true$">
+      <action application="broadcast" data="lecture101@lecture+role=speaker+exclusive=true+display_name=Host"/>
+    </condition>
+    <condition field="pin_ok" expression="^false$">
+      <action application="playback" data="tone_stream://%(500,0,320)"/>
+      <action application="hangup" data="NORMAL_CLEARING"/>
+    </condition>
+  </extension>
+
+  <!-- Listener leg: welcome + tag for analytics -->
+  <extension name="broadcast_listener">
+    <condition field="destination_number" expression="^3001$">
+      <action application="answer"/>
+      <action application="playback" data="ivr/ivr-welcome.wav"/>
+      <action application="broadcast" data="lecture101@lecture+role=listener+tag=ivr-ingress"/>
+    </condition>
+  </extension>
+
+  <!-- Operator: destroy with grace + announcement (adjust paths; uses API app) -->
+  <extension name="broadcast_operator_destroy">
+    <condition field="destination_number" expression="^3999$">
+      <action application="answer"/>
+      <action application="set" data="grace_ms=8000"/>
+      <action application="set" data="ann=/usr/share/freeswitch/sounds/en/us/callie/conference/8000/conf-conference_is_closed.wav"/>
+      <action application="api" data="broadcast lecture101 destroy ${grace_ms} ${ann}"/>
+      <action application="playback" data="ivr/ivr-call_forwarding.wav"/>
+      <action application="hangup"/>
+    </condition>
+  </extension>
+
+  <!-- Q&A hint: listeners use caller-controls digit 1 -> broadcast::speaker-request;
+       coordinator promotes with uuid_broadcast or ESL execute broadcast ... set_speaker -->
+  <extension name="broadcast_listener_qna">
+    <condition field="destination_number" expression="^3002$">
+      <action application="answer"/>
+      <action application="broadcast" data="townhall01@lecture+role=listener+display_name=Audience"/>
+    </condition>
+  </extension>
+
+</document>
