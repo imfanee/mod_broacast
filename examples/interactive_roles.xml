@@ -1,0 +1,32 @@
+<!--
+  interactive_roles.xml
+
+  Dialplan configuration for interactive speaker <-> listener role transitions.
+  Place this inside your dialplan context (e.g., /etc/freeswitch/dialplan/default.xml).
+-->
+<include>
+  <!--
+    Join interactive broadcast lobby.
+    - Dialing 6000 routes the session into the Lua script with initial role 'speaker'.
+    - Dialing 6001 routes the session with initial role 'listener'.
+  -->
+  <extension name="interactive_broadcast_speaker">
+    <condition field="destination_number" expression="^6000$">
+      <action application="answer"/>
+      <action application="set" data="start_role=speaker"/>
+      <!-- Ensure a DTMF group with 'leave' action is bound in broadcast.conf.xml -->
+      <action application="set" data="broadcast_controls=default"/>
+      <action application="lua" data="interactive_roles.lua"/>
+    </condition>
+  </extension>
+
+  <extension name="interactive_broadcast_listener">
+    <condition field="destination_number" expression="^6001$">
+      <action application="answer"/>
+      <action application="set" data="start_role=listener"/>
+      <!-- Ensure a DTMF group with 'leave' action is bound in broadcast.conf.xml -->
+      <action application="set" data="broadcast_controls=default"/>
+      <action application="lua" data="interactive_roles.lua"/>
+    </condition>
+  </extension>
+</include>

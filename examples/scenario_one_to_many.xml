@@ -1,0 +1,25 @@
+<!--
+  scenario_one_to_many.xml
+
+  Dialplan for standard one-to-many broadcast.
+  One speaker connects, and thousands of listeners receive the audio stream.
+-->
+<include>
+  <!-- 7000: Speaker entrance. Binds custom caller controls for speaker management. -->
+  <extension name="one_to_many_speaker">
+    <condition field="destination_number" expression="^7000$">
+      <action application="answer"/>
+      <action application="set" data="broadcast_controls=lecture-controls"/>
+      <action application="broadcast" data="one_to_many_room@default+role=speaker+display_name=Lecturer"/>
+    </condition>
+  </extension>
+
+  <!-- 7001: Listener entrance. Fast, low-overhead write-only path. -->
+  <extension name="one_to_many_listener">
+    <condition field="destination_number" expression="^7001$">
+      <action application="answer"/>
+      <action application="set" data="media_timeout=0"/>
+      <action application="broadcast" data="one_to_many_room@default+role=listener+tag=one-to-many-listener"/>
+    </extension>
+  </extension>
+</include>

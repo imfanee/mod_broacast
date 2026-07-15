@@ -1,0 +1,34 @@
+<!--
+  scenario_few_to_many.xml
+
+  Dialplan for Few-to-Many scenario (Conference-to-Broadcast bridging).
+  Exposes extensions for panel hosts (conference) and mass listeners (broadcast).
+-->
+<include>
+  <!-- 7200: Panel Host Entrance. Joins standard mod_conference. -->
+  <extension name="panel_host_join">
+    <condition field="destination_number" expression="^7200$">
+      <action application="answer"/>
+      <action application="conference" data="speakers_conf@default"/>
+    </condition>
+  </extension>
+
+  <!-- 7201: Loopback Conference Receiver.
+       Enters mod_conference to receive the mixed panel host audio stream. -->
+  <extension name="conf_receiver">
+    <condition field="destination_number" expression="^7201$">
+      <action application="answer"/>
+      <!-- Join conference as silent member (do not feed audio back to panel) -->
+      <action application="conference" data="speakers_conf@default+flags{mute}"/>
+    </condition>
+  </extension>
+
+  <!-- 7202: Mass Listener Entrance. Joins mod_broadcast. -->
+  <extension name="mass_listener_join">
+    <condition field="destination_number" expression="^7202$">
+      <action application="answer"/>
+      <action application="set" data="media_timeout=0"/>
+      <action application="broadcast" data="massive_room@default+role=listener+tag=few-to-many"/>
+    </condition>
+  </extension>
+</include>

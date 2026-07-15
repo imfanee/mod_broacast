@@ -254,3 +254,36 @@ Tune Sofia socket buffer parameters to prevent packet drops during registration 
 <param name="socket-send-buffer-size" value="16777216"/>
 <param name="socket-recv-buffer-size" value="16777216"/>
 ```
+
+---
+
+## 9. Advanced Scenarios & Code Examples
+
+A suite of advanced deployment scenarios, including Lua scripts and dialplan snippets, is located in the `examples/` directory:
+
+### 9.1 Scenario A: One-to-Many Live Broadcast
+* **Description**: Standard one-to-many setup where a speaker (configured with volume adjustment and mute keys) broadcasts to thousands of passive listeners.
+* **Code Links**:
+  * [scenario_one_to_many.xml](examples/scenario_one_to_many.xml) - Dialplan mapping speaker (7000) and listener (7001) entries.
+  * [scenario_one_to_many.lua](examples/scenario_one_to_many.lua) - Script to automate loopback speaker origination and statistics monitoring.
+
+### 9.2 Scenario B: Cascading Rooms (Multi-Server Scale)
+* **Description**: Bypasses network card / UDP throughput caps of a single server by establishing one-way audio bridges (cascades) between rooms/servers. A listener leg from `primary_room` is bridged directly as the speaker leg of `secondary_room`.
+* **Code Links**:
+  * [scenario_cascaded.xml](examples/scenario_cascaded.xml) - Dialplan entry for the loopback cascade bridge.
+  * [scenario_cascaded.lua](examples/scenario_cascaded.lua) - Automation script setting up loopback bridging between rooms.
+
+### 9.3 Scenario C: Few-to-Many (Panelists Conference to Mass Broadcast)
+* **Description**: Integrates standard `mod_conference` with `mod_broadcast`. A panel of 3-5 active hosts join a conference room (where they talk to and hear each other). The mixed conference stream is bridged as the single speaker leg to a `mod_broadcast` room, scaling to 10,000+ passive listeners at $O(1)$ cost.
+* **Code Links**:
+  * [scenario_few_to_many.xml](examples/scenario_few_to_many.xml) - Dialplan routing hosts to conference (7200), bridge (7201), and listeners to broadcast (7202).
+  * [scenario_few_to_many.lua](examples/scenario_few_to_many.lua) - Lua bridge setup script.
+
+### 9.4 Interactive Transitions (Role Switching)
+* **Description**: Allows callers to switch roles interactively:
+  * **Speaker to Listener**: Active speaker presses `9` (DTMF leave action), returning control to Lua. Lua queries the user and re-joins them as a listener.
+  * **Listener to Speaker**: A listener presses `9` (DTMF leave action), returning control to Lua. Lua prompts for a PIN ("1234") and re-routes them into the broadcast as the active speaker.
+* **Code Links**:
+  * [interactive_roles.xml](examples/interactive_roles.xml) - Lobby dialplan routing.
+  * [interactive_roles.lua](examples/interactive_roles.lua) - State machine Lua script managing transitions and PIN checks.
+

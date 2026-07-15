@@ -1,0 +1,18 @@
+<!--
+  scenario_cascaded.xml
+
+  Dialplan for cascaded broadcasts.
+  Allows bridging room 'primary_room' to 'secondary_room' (which can be local or remote).
+-->
+<include>
+  <!-- 7100: Cascade Bridge Entry.
+       Listens to 'primary_room' and feeds it into 'secondary_room' as the speaker. -->
+  <extension name="cascade_bridge">
+    <condition field="destination_number" expression="^7100$">
+      <action application="answer"/>
+      <action application="set" data="media_timeout=0"/>
+      <!-- Join primary_room as a listener -->
+      <action application="broadcast" data="primary_room+role=listener+tag=cascade-receiver"/>
+    </condition>
+  </extension>
+</include>
