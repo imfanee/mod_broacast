@@ -192,6 +192,14 @@ static void b_listener_match_controls(member_obj_t *m, const char *buf)
 	for (bind = g->bindings; bind; bind = bind->next) {
 		if (!strcmp(buf, bind->digits)) {
 			switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(m->session), SWITCH_LOG_NOTICE, "DTMF match: room=%s member=%u digits=%s action=%d\n", m->broadcast->name, m->id, buf, bind->action);
+			/* Reset the accumulator on a MATCH. Without this the matched digits
+			 * stay in m->dtmf_buf until 1.5s of inactivity expires, so a second
+			 * control pressed inside that window is appended to the first --
+			 * "*0" then "*5" becomes "*0*5" and matches nothing. Multi-character
+			 * bindings were therefore unusable in quick succession. Cleared
+			 * BEFORE dispatch: an action may tear the member down, and `buf`
+			 * aliases m->dtmf_buf so it must not be touched afterwards. */
+			m->dtmf_buf[0] = '\0';
 			b_listener_dispatch_control(m, bind);
 			switch_thread_rwlock_unlock(broadcast_globals.config_rwlock);
 			return;
