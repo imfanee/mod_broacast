@@ -55,7 +55,10 @@ static void b_apply_silence_policy(broadcast_obj_t *b, uint8_t *dst, uint32_t *d
 		return;
 	}
 	if (!strncasecmp(pol, "moh:", 4)) {
-		switch_size_t want = bpf;
+		/* SAMPLES, not bytes -- same units bug as the play_fh path below:
+		 * requesting bpf samples read twice the audio per tick, so MoH played
+		 * at double speed and could over-run dst on wide profiles. */
+		switch_size_t want = spf;
 		switch_size_t rlen = 0;
 		switch_status_t r;
 
@@ -168,10 +171,19 @@ void *SWITCH_THREAD_FUNC broadcast_producer_run(switch_thread_t *thread, void *o
 
 		switch_mutex_lock(b->play_mutex);
 		if ((broadcast_cflags_load_acq(b) & BFLAG_PLAY_FILE) && b->play_fh) {
-			switch_size_t want = b->bytes_per_frame;
+			/* switch_core_file_read() counts SAMPLES, not bytes (see
+			 * switch_core_file.c: it converts with *len * 2 * channels).
+			 * Requesting bytes_per_frame samples read TWICE the audio per tick
+			 * -- bpf = spf * channels * 2 -- so every played file ran at double
+			 * speed and hit EOF in half its real duration, while datalen (used
+			 * downstream as a BYTE count) then discarded half of what was read.
+			 * It also over-ran local_data[BROADCAST_MAX_FRAME_BYTES] on wide
+			 * profiles: the read was 2*bpf bytes, which exceeds 1920 for
+			 * 32kHz+ mono or stereo >= 16kHz. Request samples, convert back. */
+			switch_size_t want = b->samples_per_frame;
 			switch_size_t rlen = want;
 			if (switch_core_file_read(b->play_fh, local_data, &rlen) == SWITCH_STATUS_SUCCESS && rlen == want) {
-				datalen = (uint32_t)rlen;
+				datalen = (uint32_t)(rlen * 2 * b->channels);
 				silence_flag = 0;
 			} else {
 				switch_core_file_close(b->play_fh);
